@@ -24,7 +24,7 @@ def test_version_endpoint():
     assert response.json() == {
         "version": "1.0.0",
         "environment": "demo"
-    } 
+    }
 def test_add_invalid_input():
     response = client.get("/add?a=abc&b=3")
 
