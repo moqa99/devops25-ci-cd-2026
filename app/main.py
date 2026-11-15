@@ -18,3 +18,9 @@ def health():
 @app.get("/add")
 def add_endpoint(a: float, b: float):
     return {"result": add(a, b)}
+@app.get("/version")
+def get_version():
+    return {
+        "version": "1.0.0",
+        "environment": "demo"
+    }

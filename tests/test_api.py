@@ -15,3 +15,17 @@ def test_add_endpoint():
     response = client.get("/add?a=2&b=3")
     assert response.status_code == 200
     assert response.json() == {"result": 5.0}
+
+def test_version_endpoint():
+    response = client.get("/version")
+
+    assert response.status_code == 200
+
+    assert response.json() == {
+        "version": "1.0.0",
+        "environment": "demo"
+    } 
+def test_add_invalid_input():
+    response = client.get("/add?a=abc&b=3")
+
+    assert response.status_code == 422
