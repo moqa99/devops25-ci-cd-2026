@@ -1,3 +1,4 @@
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -16,16 +17,22 @@ def test_add_endpoint():
     assert response.status_code == 200
     assert response.json() == {"result": 5.0}
 
+
 def test_version_endpoint():
     response = client.get("/version")
-
     assert response.status_code == 200
-
     assert response.json() == {
-        "version": "1.0.0",
-        "environment": "demo"
+        "version": "1.1.0",
+        "environment": "demo",
     }
+
+
 def test_add_invalid_input():
     response = client.get("/add?a=abc&b=3")
-
     assert response.status_code == 422
+
+
+def test_multiply_endpoint():
+    response = client.get("/multiply?a=4&b=5")
+    assert response.status_code == 200
+    assert response.json() == {"result": 20.0}

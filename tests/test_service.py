@@ -1,6 +1,7 @@
+
 import pytest
 
-from app.service import add, divide
+from app.service import add, divide, multiply
 
 
 def test_add():
@@ -14,3 +15,7 @@ def test_divide():
 def test_divide_by_zero():
     with pytest.raises(ValueError):
         divide(10, 0)
+
+
+def test_multiply():
+    assert multiply(4, 5) == 20
