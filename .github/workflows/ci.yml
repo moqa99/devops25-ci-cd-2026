@@ -142,3 +142,77 @@ jobs:
       - name: Cleanup container
         if: always()
         run: docker rm -f nexus-cicd-cd 2>/dev/null || true
+
+  rollback-verification:
+    name: Automated Rollback Test
+    needs: [docker-build, deploy-simulated]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout current project
+        uses: actions/checkout@v7
+
+      - name: Checkout stable version 1.0.0
+        uses: actions/checkout@v7
+        with:
+          ref: 4fe91999341ddf62440cb8ae6ea73e38ad2d9c7c
+          path: fallback-v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v8
+        with:
+          name: nexus-docker-image
+
+      - name: Verify Docker archive
+        run: sha256sum -c nexus-cicd-api.tar.sha256
+
+      - name: Load application image
+        run: docker load -i nexus-cicd-api.tar
+
+      - name: Build stable fallback image
+        run: |
+          docker build \
+            -t nexus-cicd-api:1.0.0 \
+            ./fallback-v1
+
+      - name: Test successful deployment
+        run: |
+          bash scripts/deploy_with_rollback.sh \
+            "$IMAGE_TAG" 1.1.0
+
+      - name: Simulate failure and verify rollback
+        run: |
+          set +e
+          bash scripts/deploy_with_rollback.sh \
+            "$IMAGE_TAG" 9.9.9
+          result=$?
+          set -e
+
+          if [ "$result" -ne 2 ]; then
+            echo "Expected rollback exit code 2, got $result"
+            exit 1
+          fi
+
+          echo "Rollback script reported successful recovery"
+
+      - name: Verify restored stable version
+        run: |
+          curl -fsS http://127.0.0.1:8001/version | \
+          python -c 'import json,sys; d=json.load(sys.stdin); assert d["version"] == "1.0.0", d'
+
+          curl -fsS http://127.0.0.1:8001/health | \
+          python -c 'import json,sys; d=json.load(sys.stdin); assert d["status"] == "ok", d'
+
+          test "$(docker inspect --format '{{.Config.Image}}' nexus-cicd-rollback-demo)" = "nexus-cicd-api:1.0.0"
+
+          echo "ROLLBACK VERIFIED: Version 1.0.0 restored"
+
+      - name: Cleanup rollback container
+        if: always()
+        run: docker rm -f nexus-cicd-rollback-demo 2>/dev/null || true
